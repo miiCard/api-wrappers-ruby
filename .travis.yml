@@ -3,7 +3,7 @@ rvm:
  - 1.9.3
 before_install:
  - gem build miiCardConsumers.gemspec
- - find . -iname "*.gem" -print0 -maxdepth 1 | xargs -0 gem install
+ - find . -maxdepth 1 -iname "*.gem" -print0 | xargs -0 gem install
 script:
  - ruby test/test_miiCardConsumers.rb
 notifications:

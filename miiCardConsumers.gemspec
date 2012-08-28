@@ -7,5 +7,9 @@
   s.authors     = ["Paul O'Neill"]
   s.email       = 'paul.oneill@miicard.com'
   s.files       = ["lib/miiCardConsumers.rb"]
+  s.test_files  = ["test/test_miiCardConsumers.rb"]
   s.homepage    = 'http://www.miicard.com/developers'
+ 
+  s.add_dependency "oauth"
+  s.add_dependency "json"
 end
