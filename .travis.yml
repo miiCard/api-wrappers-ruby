@@ -1,7 +1,7 @@
 language: ruby
 rvm:
  - 1.9.3
-install:
+before_install:
  - gem build miiCardConsumers.gemspec
  - find . -iname "*.gem" -print0 -maxdepth 1 | xargs -0 gem install
 script:

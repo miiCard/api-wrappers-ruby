@@ -28,6 +28,14 @@ module MiiApiErrorCode
     EXCEPTION = 10000
 end
 
+# Describes the overall status of an API call.
+module WebPropertyType
+	# Indicates that the WebProperty relates to a domain name.
+	DOMAIN = 0
+	# Indicates that the WebProperty relates to a website.
+	WEBSITE = 1
+end
+
 # Base class for most verifiable identity data.
 class Claim
 	attr_accessor :verified
@@ -304,6 +312,10 @@ class MiiCardOAuthServiceBase
 	attr_accessor :consumer_key, :consumer_secret, :access_token, :access_token_secret
 	
 	def initialize(consumer_key, consumer_secret, access_token, access_token_secret)
+		if consumer_key.nil? || consumer_secret.nil? || access_token.nil? || access_token_secret.nil?
+			raise ArgumentError
+		end 
+
 		@consumer_key = consumer_key
 		@consumer_secret = consumer_secret
 		@access_token = access_token
