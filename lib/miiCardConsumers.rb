@@ -281,7 +281,7 @@ class MiiUserProfile
 			hash['PreviousFirstName'],
 			hash['PreviousMiddleName'],
 			hash['PreviousLastName'],
-			hash['LastVerified'],
+			Util::parse_dot_net_json_datetime(hash['LastVerified']),
 			hash['ProfileUrl'],
 			hash['ProfileShortUrl'],
 			hash['CardImageUrl'],
@@ -336,7 +336,7 @@ end
 class IdentitySnapshotDetails
     attr_accessor :snapshot_id, :username, :timestamp_utc, :was_test_user
     
-    def initialize(snapshot_id, username, timetamp_utc, was_test_user)
+    def initialize(snapshot_id, username, timestamp_utc, was_test_user)
         @snapshot_id = snapshot_id
         @username = username
         @timestamp_utc = timestamp_utc
@@ -347,7 +347,7 @@ class IdentitySnapshotDetails
         return IdentitySnapshotDetails.new(
             hash["SnapshotId"],
             hash["Username"],
-            hash["TimestampUtc"],
+            Util::parse_dot_net_json_datetime(hash["TimestampUtc"]),
             hash["WasTestUser"]
         )
     end
@@ -438,3 +438,10 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 	end
 end
 
+class Util
+	# Modified from http://stackoverflow.com/questions/1272195/c-sharp-serialized-json-date-to-ruby
+	def self.parse_dot_net_json_datetime(datestring)
+	  seconds_since_epoch = (datestring.scan(/[0-9]+/)[0].to_i) / 1000.0
+	  return Time.at(seconds_since_epoch)
+	end
+end
