@@ -20,3 +20,4 @@ doc/
 *.bat
 *.stproj
 *.vspscc
+*.suo

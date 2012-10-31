@@ -1,6 +1,16 @@
 require "oauth"
 require "json"
 
+class MiiCardServiceUrls
+	OAUTH_ENDPOINT = "https://stsbeta.miicard.com/auth/OAuth.ashx"
+	STS_SITE = "https://stsbeta.miicard.com"
+    CLAIMS_SVC = "https://stsbeta.miicard.com/api/v1/Claims.svc/json"
+	
+	def self.get_method_url(method_name)
+		return MiiCardServiceUrls::CLAIMS_SVC + "/" + method_name
+	end
+end
+
 # Describes the overall status of an API call.
 module MiiApiCallStatus
 	# The API call succeeded - the associated result information can be found
@@ -22,6 +32,15 @@ module MiiApiErrorCode
 	# The user's miiCard subscription has elapsed. Only users with a current
 	# subscription can share their data with other applications and websites.	
     USER_SUBSCRIPTION_LAPSED = 200
+    # Signifies that your account has not been enabled for transactional support.
+    TRANSACTIONAL_SUPPORT_DISABLED = 1000
+    # Signifies that your account's support status is development-only. This is the
+    # case when your application hasn't yet been made live in the miiCard system, for example
+    # while we process your billing details and perform final checks.
+    DEVELOPMENT_TRANSACTIONAL_SUPPORT_ONLY = 1010
+    # Signifies that the snapshot ID supplied to a snapshot-based API method was either invalid
+    # or corresponded to a user for which authorisation tokens didn't match.
+    INVALID_SNAPSHOT_ID = 1020
 	# A general exception occurred during processing - details may be available
 	# in the error_message property of the response object depending upon the
 	# nature of the exception.
@@ -279,20 +298,25 @@ class MiiUserProfile
 end
 
 class MiiApiResponse
-	attr_accessor :status, :error_code, :error_message, :data
+	attr_accessor :status, :error_code, :error_message, :is_test_user, :data
 	
-	def initialize(status, error_code, error_message, data)
+	def initialize(status, error_code, error_message, is_test_user, data)
 		@status = status
 		@error_code = error_code
 		@error_message = error_message
+		@is_test_user = is_test_user
 		@data = data
 	end
 	
-	def self.from_hash(hash, data_processor)
+	def self.from_hash(hash, data_processor, array_type_payload = false)
 		payload_json = hash["Data"]
 		
 		if payload_json && !data_processor.nil?
-			payload = data_processor.call(payload_json)
+            if array_type_payload
+                payload = payload_json.map{|item| data_processor.call(item)}
+            else
+			    payload = data_processor.call(payload_json)
+            end
 		elsif !(payload_json.nil?)
 			payload = payload_json
 		else
@@ -303,9 +327,46 @@ class MiiApiResponse
 			hash["Status"], 
 			hash["ErrorCode"],
 			hash["ErrorMessage"],
+			hash["IsTestUser"],
 			payload
 		)
 	end
+end
+
+class IdentitySnapshotDetails
+    attr_accessor :snapshot_id, :username, :timestamp_utc, :was_test_user
+    
+    def initialize(snapshot_id, username, timetamp_utc, was_test_user)
+        @snapshot_id = snapshot_id
+        @username = username
+        @timestamp_utc = timestamp_utc
+        @was_test_user = was_test_user
+    end
+    
+    def self.from_hash(hash)
+        return IdentitySnapshotDetails.new(
+            hash["SnapshotId"],
+            hash["Username"],
+            hash["TimestampUtc"],
+            hash["WasTestUser"]
+        )
+    end
+end
+
+class IdentitySnapshot
+    attr_accessor :details, :snapshot
+    
+    def initialize(details, snapshot)
+        @details = details
+        @snapshot = snapshot
+    end
+    
+    def self.from_hash(hash)
+        return IdentitySnapshot.new(
+            IdentitySnapshotDetails::from_hash(hash["Details"]),
+            MiiUserProfile::from_hash(hash["Snapshot"])
+        )
+    end
 end
 
 class MiiCardOAuthServiceBase
@@ -347,31 +408,33 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		
 		return make_request(MiiCardServiceUrls.get_method_url('AssuranceImage'), params, nil, false)
 	end
+        
+    def get_identity_snapshot_details(snapshot_id = nil)
+        params = Hash["snapshotId", snapshot_id]
+        
+        return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshotDetails'), params, IdentitySnapshotDetails.method(:from_hash), true, true)
+    end
+    
+    def get_identity_snapshot(snapshot_id)
+        params = Hash["snapshotId", snapshot_id]
+        
+        return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshot'), params, IdentitySnapshot.method(:from_hash), true)
+    end
 	
 	private
-	def make_request(url, post_data, payload_processor, wrapped_response)
+	def make_request(url, post_data, payload_processor, wrapped_response, array_type_payload = false)
 		consumer = OAuth::Consumer.new(@consumer_key, @consumer_secret, {:site => MiiCardServiceUrls::STS_SITE, :request_token_path => MiiCardServiceUrls::OAUTH_ENDPOINT, :access_token_path => MiiCardServiceUrls::OAUTH_ENDPOINT, :authorize_path => MiiCardServiceUrls::OAUTH_ENDPOINT })
 		access_token = OAuth::AccessToken.new(consumer, @access_token, @access_token_secret)
 				
 		response = access_token.post(url, post_data.to_json(), { 'Content-Type' => 'application/json' })
 		
 		if wrapped_response
-			return MiiApiResponse::from_hash(JSON.parse(response.body), payload_processor)
+            return MiiApiResponse::from_hash(JSON.parse(response.body), payload_processor, array_type_payload)
 		elsif !payload_processor.nil?
 			return payload_processor.call(response.body)
 		else
 			return response.body
 		end
-	end
-end
-
-class MiiCardServiceUrls
-	OAUTH_ENDPOINT = "https://sts.miicard.com/auth/OAuth.ashx"
-	STS_SITE = "https://sts.miicard.com"
-    CLAIMS_SVC = "https://sts.miicard.com/api/v1/Claims.svc/json"
-	
-	def self.get_method_url(method_name)
-		return MiiCardServiceUrls::CLAIMS_SVC + "/" + method_name
 	end
 end
 
