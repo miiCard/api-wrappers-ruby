@@ -2,9 +2,9 @@ require "oauth"
 require "json"
 
 class MiiCardServiceUrls
-	OAUTH_ENDPOINT = "https://stsbeta.miicard.com/auth/OAuth.ashx"
-	STS_SITE = "https://stsbeta.miicard.com"
-    CLAIMS_SVC = "https://stsbeta.miicard.com/api/v1/Claims.svc/json"
+	OAUTH_ENDPOINT = "https://sts.miicard.com/auth/OAuth.ashx"
+	STS_SITE = "https://sts.miicard.com"
+    CLAIMS_SVC = "https://sts.miicard.com/api/v1/Claims.svc/json"
 	
 	def self.get_method_url(method_name)
 		return MiiCardServiceUrls::CLAIMS_SVC + "/" + method_name
@@ -41,6 +41,17 @@ module MiiApiErrorCode
     # Signifies that the snapshot ID supplied to a snapshot-based API method was either invalid
     # or corresponded to a user for which authorisation tokens didn't match.
     INVALID_SNAPSHOT_ID = 1020
+	# Signifies that your application has been suspended and no API access can take place
+	# until miiCard releases the suspension on your application.
+	BLACKLISTED = 2000
+	# Signifies that your application has been disabled, either by your request or by miiCard. 
+	# miiCard members will be unable to go through the OAuth process for your application, 
+	# though you will still be able to access the API.
+	PRODUCT_DISABLED = 2010
+	# Signifies that your application has been deleted. miiCard members will be unable to go 
+	# through the OAuth process for your application, nor will you be able to access identity 
+	# details through the API.
+	PRODUCT_DELETED = 2020
 	# A general exception occurred during processing - details may be available
 	# in the error_message property of the response object depending upon the
 	# nature of the exception.
