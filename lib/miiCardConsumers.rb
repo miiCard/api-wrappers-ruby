@@ -4,7 +4,7 @@ require "json"
 class MiiCardServiceUrls
 	OAUTH_ENDPOINT = "https://sts.miicard.com/auth/OAuth.ashx"
 	STS_SITE = "https://sts.miicard.com"
-    CLAIMS_SVC = "https://sts.miicard.com/api/v1/Claims.svc/json"
+	CLAIMS_SVC = "https://sts.miicard.com/api/v1/Claims.svc/json"
 	
 	def self.get_method_url(method_name)
 		return MiiCardServiceUrls::CLAIMS_SVC + "/" + method_name
@@ -31,16 +31,16 @@ module MiiApiErrorCode
 	ACCESS_REVOKED = 100
 	# The user's miiCard subscription has elapsed. Only users with a current
 	# subscription can share their data with other applications and websites.	
-    USER_SUBSCRIPTION_LAPSED = 200
-    # Signifies that your account has not been enabled for transactional support.
-    TRANSACTIONAL_SUPPORT_DISABLED = 1000
-    # Signifies that your account's support status is development-only. This is the
-    # case when your application hasn't yet been made live in the miiCard system, for example
-    # while we process your billing details and perform final checks.
-    DEVELOPMENT_TRANSACTIONAL_SUPPORT_ONLY = 1010
-    # Signifies that the snapshot ID supplied to a snapshot-based API method was either invalid
-    # or corresponded to a user for which authorisation tokens didn't match.
-    INVALID_SNAPSHOT_ID = 1020
+	USER_SUBSCRIPTION_LAPSED = 200
+	# Signifies that your account has not been enabled for transactional support.
+	TRANSACTIONAL_SUPPORT_DISABLED = 1000
+	# Signifies that your account's support status is development-only. This is the
+	# case when your application hasn't yet been made live in the miiCard system, for example
+	# while we process your billing details and perform final checks.
+	DEVELOPMENT_TRANSACTIONAL_SUPPORT_ONLY = 1010
+	# Signifies that the snapshot ID supplied to a snapshot-based API method was either invalid
+	# or corresponded to a user for which authorisation tokens didn't match.
+	INVALID_SNAPSHOT_ID = 1020
 	# Signifies that your application has been suspended and no API access can take place
 	# until miiCard releases the suspension on your application.
 	BLACKLISTED = 2000
@@ -55,7 +55,7 @@ module MiiApiErrorCode
 	# A general exception occurred during processing - details may be available
 	# in the error_message property of the response object depending upon the
 	# nature of the exception.
-    EXCEPTION = 10000
+	EXCEPTION = 10000
 end
 
 # Describes the overall status of an API call.
@@ -199,51 +199,53 @@ class MiiUserProfile
 	attr_accessor :previous_first_name, :previous_middle_name, :previous_last_name
 	attr_accessor :last_verified, :profile_url, :profile_short_url, :card_image_url, :email_addresses, :identities, :postal_addresses
 	attr_accessor :phone_numbers, :web_properties, :identity_assured, :has_public_profile
-	attr_accessor :public_profile
+	attr_accessor :public_profile, :date_of_birth
 	
 	def initialize(
 		username,
 		salutation,
-        first_name,
-        middle_name,
-        last_name,
-        previous_first_name,
-        previous_middle_name,
-        previous_last_name,
-        last_verified,
-        profile_url,
-        profile_short_url,
-        card_image_url,
-        email_addresses,
-        identities,
-        phone_numbers,
-        postal_addresses,
-        web_properties,
-        identity_assured,
-        has_public_profile,
-        public_profile
+		first_name,
+		middle_name,
+		last_name,
+		previous_first_name,
+		previous_middle_name,
+		previous_last_name,
+		last_verified,
+		profile_url,
+		profile_short_url,
+		card_image_url,
+		email_addresses,
+		identities,
+		phone_numbers,
+		postal_addresses,
+		web_properties,
+		identity_assured,
+		has_public_profile,
+		public_profile,
+		date_of_birth
 		)
 		
 		@username= username
 		@salutation = salutation
-        @first_name = first_name
-        @middle_name = middle_name
-        @last_name = last_name
-        @previous_first_name = previous_first_name
-        @previous_middle_name = previous_middle_name
-        @previous_last_name = previous_last_name
-        @last_verified = last_verified
-        @profile_url = profile_url
-        @profile_short_url = profile_short_url
-        @card_image_url = card_image_url
-        @email_addresses = email_addresses
-        @identities = identities
-        @phone_numbers = phone_numbers
-        @postal_addresses = postal_addresses
-        @web_properties = web_properties
-        @identity_assured = identity_assured
-        @has_public_profile = has_public_profile
-        @public_profile = public_profile
+		@first_name = first_name
+		@middle_name = middle_name
+		@last_name = last_name
+		@previous_first_name = previous_first_name
+		@previous_middle_name = previous_middle_name
+		@previous_last_name = previous_last_name
+		@last_verified = last_verified
+		@profile_url = profile_url
+		@profile_short_url = profile_short_url
+		@card_image_url = card_image_url
+		@email_addresses = email_addresses
+		@identities = identities
+		@phone_numbers = phone_numbers
+		@postal_addresses = postal_addresses
+		@web_properties = web_properties
+		@identity_assured = identity_assured
+		@has_public_profile = has_public_profile
+		@public_profile = public_profile
+		@date_of_birth = date_of_birth
 	end
 	
 	def self.from_hash(hash)
@@ -303,7 +305,8 @@ class MiiUserProfile
 			web_properties_parsed,
 			hash['IdentityAssured'],
 			hash['HasPublicProfile'],
-			public_profile_parsed
+			public_profile_parsed,
+			Util::parse_dot_net_json_datetime(hash['DateOfBirth'])
 			)			
 	end
 end
@@ -323,11 +326,11 @@ class MiiApiResponse
 		payload_json = hash["Data"]
 		
 		if payload_json && !data_processor.nil?
-            if array_type_payload
-                payload = payload_json.map{|item| data_processor.call(item)}
-            else
-			    payload = data_processor.call(payload_json)
-            end
+			if array_type_payload
+				payload = payload_json.map{|item| data_processor.call(item)}
+			else
+				payload = data_processor.call(payload_json)
+			end
 		elsif !(payload_json.nil?)
 			payload = payload_json
 		else
@@ -345,39 +348,39 @@ class MiiApiResponse
 end
 
 class IdentitySnapshotDetails
-    attr_accessor :snapshot_id, :username, :timestamp_utc, :was_test_user
-    
-    def initialize(snapshot_id, username, timestamp_utc, was_test_user)
-        @snapshot_id = snapshot_id
-        @username = username
-        @timestamp_utc = timestamp_utc
-        @was_test_user = was_test_user
-    end
-    
-    def self.from_hash(hash)
-        return IdentitySnapshotDetails.new(
-            hash["SnapshotId"],
-            hash["Username"],
-            Util::parse_dot_net_json_datetime(hash["TimestampUtc"]),
-            hash["WasTestUser"]
-        )
-    end
+	attr_accessor :snapshot_id, :username, :timestamp_utc, :was_test_user
+	
+	def initialize(snapshot_id, username, timestamp_utc, was_test_user)
+		@snapshot_id = snapshot_id
+		@username = username
+		@timestamp_utc = timestamp_utc
+		@was_test_user = was_test_user
+	end
+	
+	def self.from_hash(hash)
+		return IdentitySnapshotDetails.new(
+			hash["SnapshotId"],
+			hash["Username"],
+			Util::parse_dot_net_json_datetime(hash["TimestampUtc"]),
+			hash["WasTestUser"]
+		)
+	end
 end
 
 class IdentitySnapshot
-    attr_accessor :details, :snapshot
-    
-    def initialize(details, snapshot)
-        @details = details
-        @snapshot = snapshot
-    end
-    
-    def self.from_hash(hash)
-        return IdentitySnapshot.new(
-            IdentitySnapshotDetails::from_hash(hash["Details"]),
-            MiiUserProfile::from_hash(hash["Snapshot"])
-        )
-    end
+	attr_accessor :details, :snapshot
+	
+	def initialize(details, snapshot)
+		@details = details
+		@snapshot = snapshot
+	end
+	
+	def self.from_hash(hash)
+		return IdentitySnapshot.new(
+			IdentitySnapshotDetails::from_hash(hash["Details"]),
+			MiiUserProfile::from_hash(hash["Snapshot"])
+		)
+	end
 end
 
 class MiiCardOAuthServiceBase
@@ -419,18 +422,18 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		
 		return make_request(MiiCardServiceUrls.get_method_url('AssuranceImage'), params, nil, false)
 	end
-        
-    def get_identity_snapshot_details(snapshot_id = nil)
-        params = Hash["snapshotId", snapshot_id]
-        
-        return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshotDetails'), params, IdentitySnapshotDetails.method(:from_hash), true, true)
-    end
-    
-    def get_identity_snapshot(snapshot_id)
-        params = Hash["snapshotId", snapshot_id]
-        
-        return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshot'), params, IdentitySnapshot.method(:from_hash), true)
-    end
+		
+	def get_identity_snapshot_details(snapshot_id = nil)
+		params = Hash["snapshotId", snapshot_id]
+		
+		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshotDetails'), params, IdentitySnapshotDetails.method(:from_hash), true, true)
+	end
+	
+	def get_identity_snapshot(snapshot_id)
+		params = Hash["snapshotId", snapshot_id]
+		
+		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshot'), params, IdentitySnapshot.method(:from_hash), true)
+	end
 	
 	private
 	def make_request(url, post_data, payload_processor, wrapped_response, array_type_payload = false)
@@ -440,7 +443,7 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		response = access_token.post(url, post_data.to_json(), { 'Content-Type' => 'application/json' })
 		
 		if wrapped_response
-            return MiiApiResponse::from_hash(JSON.parse(response.body), payload_processor, array_type_payload)
+			return MiiApiResponse::from_hash(JSON.parse(response.body), payload_processor, array_type_payload)
 		elsif !payload_processor.nil?
 			return payload_processor.call(response.body)
 		else
@@ -453,6 +456,6 @@ class Util
 	# Modified from http://stackoverflow.com/questions/1272195/c-sharp-serialized-json-date-to-ruby
 	def self.parse_dot_net_json_datetime(datestring)
 	  seconds_since_epoch = (datestring.scan(/[0-9]+/)[0].to_i) / 1000.0
-	  return Time.at(seconds_since_epoch)
+	  return DateTime.strptime(seconds_since_epoch.to_s, '%s')
 	end
 end
