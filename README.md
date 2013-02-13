@@ -27,6 +27,154 @@ Then make calls against it simply:
     
     user_first_name = user_profile_response.data.first_name
 
+##Mapping from API data types
+The following list is provided as a convenient cheat-sheet, and maps the API's methods and data types to their equivalents in the Ruby wrapper library classes.
+
+###Methods
+<table>
+<tr><th>API method</td><th>Ruby equivalent (given `api` instance of MiiCardOAuthClaimsService)</th></tr>
+<tr><td>AssuranceImage</td><td>api.assurance_image(type)</td></tr>
+<tr><td>GetClaims</td><td>api.get_claims()</td></tr>
+<tr><td>GetIdentitySnapshot</td><td>api.get_identity_snapshot(snapshot_id)</td></tr>
+<tr><td>GetIdentitySnapshotDetails</td><td>api.get_identity_snapshot_details()<br /><b>Or, for a specific snapshot:</b><br />api.get_identity_snapshot_details(snapshot_id)</td></tr>
+<tr><td>IsSocialAccountAssured</td><td>api.is_social_account_assured(social_account_id, social_account_type)</td></tr>
+<tr><td>IsUserAssured</td><td>api.is_user_assured()</td></tr>
+</table>
+
+###Data types
+
+####EmailAddress
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `email` instance of EmailAddress)</th></tr>
+<tr><td>DisplayName</td><td>email.display_name</td></tr>
+<tr><td>Address</td><td>email.address</td></tr>
+<tr><td>IsPrimary</td><td>email.is_primary</td></tr>
+<tr><td>Verified</td><td>email.verified</td></tr>
+</table>
+
+####Identity
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `identity` instance of Identity)</th></tr>
+<tr><td>Source</td><td>identity.source</td></tr>
+<tr><td>UserId</td><td>identity.user_id</td></tr>
+<tr><td>ProfileUrl</td><td>identity.profile_url</td></tr>
+<tr><td>Verified</td><td>identity.verified</td></tr>
+</table>
+
+####IdentitySnapshot
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `snapshot` instance of IdentitySnapshot)</th></tr>
+<tr><td>Details</td><td>snapshot.details</td></tr>
+<tr><td>Snapshot</td><td>snapshot.snapshot</td></tr>
+</table>
+
+####IdentitySnapshotDetails
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `snapshot_details` instance of IdentitySnapshotDetails)</th></tr>
+<tr><td>SnapshotId</td><td>snapshot_details.snapshot_id</td></tr>
+<tr><td>Username</td><td>snapshot_details.username</td></tr>
+<tr><td>TimestampUtc</td><td>snapshot_details.timestamp_utc</td></tr>
+<tr><td>WasTestUser</td><td>snapshot_details.was_test_user</td></tr>
+</table>
+
+####MiiApiCallStatus enumeration type
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent</th></tr>
+<tr><td>Success</td><td>MiiApiCallStatus.SUCCESS</td></tr>
+<tr><td>Failure</td><td>MiiApiCallStatus.FAILURE</td></tr>
+</table>
+
+####MiiApiErrorCode enumeration type
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent</th></tr>
+<tr><td>Success</td><td>MiiApiCallStatus.SUCCESS</td></tr>
+<tr><td>AccessRevoked</td><td>MiiApiCallStatus.ACCESS_REVOKED</td></tr>
+<tr><td>UserSubscriptionLapsed</td><td>MiiApiCallStatus.USER_SUBSCRIPTION_LAPSED</td></tr>
+<tr><td>TransactionalSupportDisabled</td><td>MiiApiCallStatus.TRANSATIONAL_SUPPORT_DISABLED</td></tr>
+<tr><td>DevelopmentTransactionalSupportOnly</td><td>MiiApiCallStatus.DEVELOPMENT_TRANSACTIONAL_SUPPORT_ONLY</td></tr>
+<tr><td>InvalidSnapshotId</td><td>MiiApiCallStatus.INVALID_SNAPSHOT_ID</td></tr>
+<tr><td>Blacklisted</td><td>MiiApiCallStatus.BLACKLISTED</td></tr>
+<tr><td>ProductDisabled</td><td>MiiApiCallStatus.PRODUCT_DISABLED</td></tr>
+<tr><td>ProductDeleted</td><td>MiiApiCallStatus.PRODUCT_DELETED</td></tr>
+<tr><td>Exception</td><td>MiiApiCallStatus.EXCEPTION</td></tr>
+</table>
+
+####MiiApiResponse
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `response` instance of MiiApiResponse)</th></tr>
+<tr><td>Status</td><td>response.status</td></tr>
+<tr><td>ErrorCode</td><td>response.error_code</td></tr>
+<tr><td>ErrorMessage</td><td>response.error_message</td></tr>
+<tr><td>Data</td><td>response.data</td></tr>
+<tr><td>IsTestUser</td><td>response.is_test_user</td></tr>
+</table>
+
+####MiiUserProfile
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `profile` instance of MiiUserProfile)</th></tr>
+<tr><td>Salutation</td><td>profile.salutation</td></tr>
+<tr><td>FirstName</td><td>profile.first_name</td></tr>
+<tr><td>MiddleName</td><td>profile.middle_name</td></tr>
+<tr><td>LastName</td><td>profile.last_name</td></tr>
+<tr><td>DateOfBirth</td><td>profile.date_of_birth</td></tr>
+<tr><td>PreviousFirstName</td><td>profile.previous_first_name</td></tr>
+<tr><td>PreviousMiddleName</td><td>profile.previous_middle_name</td></tr>
+<tr><td>PreviousLastName</td><td>profile.previous_last_name</td></tr>
+<tr><td>LastVerified</td><td>profile.last_verified</td></tr>
+<tr><td>ProfileUrl</td><td>profile.profile_url</td></tr>
+<tr><td>ProfileShortUrl</td><td>profile.profile_short_url</td></tr>
+<tr><td>CardImageUrl</td><td>profile.card_image_url</td></tr>
+<tr><td>EmailAddresses</td><td>profile.email_addresses</td></tr>
+<tr><td>Identities</td><td>profile.identities</td></tr>
+<tr><td>PhoneNumbers</td><td>profile.phone_numbers</td></tr>
+<tr><td>PostalAddresses</td><td>profile.postal_addresses</td></tr>
+<tr><td>WebProperties</td><td>profile.web_properties</td></tr>
+<tr><td>IdentityAssured</td><td>profile.identity_assured</td></tr>
+<tr><td>HasPublicProfile</td><td>profile.has_public_profile</td></tr>
+<tr><td>PublicProfile</td><td>profile.public_profile</td></tr>
+</table>
+
+####PhoneNumber
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `phone` instance of PhoneNumber)</th></tr>
+<tr><td>DisplayName</td><td>phone.display_name</td></tr>
+<tr><td>CountryCode</td><td>phone.country_code</td></tr>
+<tr><td>NationalNumber</td><td>phone.national_number</td></tr>
+<tr><td>IsMobile</td><td>phone.is_mobile</td></tr>
+<tr><td>IsPrimary</td><td>phone.is_primary</td></tr>
+<tr><td>Verified</td><td>phone.verified</td></tr>
+</table>
+
+####PostalAddress
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `address` instance of PostalAddress)</th></tr>
+<tr><td>House</td><td>address.house</td></tr>
+<tr><td>Line1</td><td>address.line1</td></tr>
+<tr><td>Line2</td><td>address.line2</td></tr>
+<tr><td>City</td><td>address.city</td></tr>
+<tr><td>Region</td><td>address.region</td></tr>
+<tr><td>Code</td><td>address.code</td></tr>
+<tr><td>Country</td><td>address.country</td></tr>
+<tr><td>IsPrimary</td><td>address.is_primary</td></tr>
+<tr><td>Verified</td><td>address.verified</td></tr>
+</table>
+
+####WebProperty
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `property` instance of WebProperty)</th></tr>
+<tr><td>DisplayName</td><td>property.display_name</td></tr>
+<tr><td>Identifier</td><td>property.identifier</td></tr>
+<tr><td>Type</td><td>property.type</td></tr>
+<tr><td>Verified</td><td>property.verified</td></tr>
+</table>
+
+####WebPropertyType enumeration type
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent</th></tr>
+<tr><td>Domain</td><td>WebPropertyType.DOMAIN</td></tr>
+<tr><td>Website</td><td>WebPropertyType.WEBSITE</td></tr>
+</table>
+
 ##Dependencies
 The library takes a dependency on the [Ruby OAuth Gem](http://oauth.rubyforge.org/).
 
