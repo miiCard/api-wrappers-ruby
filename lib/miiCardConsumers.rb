@@ -434,6 +434,12 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		
 		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshot'), params, IdentitySnapshot.method(:from_hash), true)
 	end
+
+	def get_identity_snapshot_pdf(snapshot_id)
+		params = Hash["snapshotId", snapshot_id]
+		
+		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshotPdf'), params, nil, false)
+	end
 	
 	private
 	def make_request(url, post_data, payload_processor, wrapped_response, array_type_payload = false)

@@ -1,7 +1,7 @@
 ﻿Gem::Specification.new do |s|
   s.name        = 'miiCardConsumers'
-  s.version     = '2.1.0'
-  s.date        = '2013-02-05'
+  s.version     = '2.2.0'
+  s.date        = '2013-07-08'
   s.summary     = "Wrapper library around the miiCard API."
   s.description = "A simple wrapper library around the miiCard API that makes calling into it easier - just new up a MiiApiOAuthClaimsService with your consumer key, secret, access token and secret and start calling methods."
   s.authors     = ["Paul O'Neill"]
