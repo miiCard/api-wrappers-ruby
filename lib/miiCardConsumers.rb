@@ -306,7 +306,7 @@ class MiiUserProfile
 			hash['IdentityAssured'],
 			hash['HasPublicProfile'],
 			public_profile_parsed,
-			Util::parse_dot_net_json_datetime(hash['DateOfBirth'])
+                        (Util::parse_dot_net_json_datetime(hash['DateOfBirth']) rescue nil)
 			)			
 	end
 end
