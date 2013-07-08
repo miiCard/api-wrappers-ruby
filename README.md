@@ -36,6 +36,7 @@ The following list is provided as a convenient cheat-sheet, and maps the API's m
 <tr><td>AssuranceImage</td><td>api.assurance_image(type)</td></tr>
 <tr><td>GetClaims</td><td>api.get_claims()</td></tr>
 <tr><td>GetIdentitySnapshot</td><td>api.get_identity_snapshot(snapshot_id)</td></tr>
+<tr><td>GetIdentitySnapshotPdf</td><td>api.get_identity_snapshot_pdf(snapshot_id)</td></tr>
 <tr><td>GetIdentitySnapshotDetails</td><td>api.get_identity_snapshot_details()<br /><b>Or, for a specific snapshot:</b><br />api.get_identity_snapshot_details(snapshot_id)</td></tr>
 <tr><td>IsSocialAccountAssured</td><td>api.is_social_account_assured(social_account_id, social_account_type)</td></tr>
 <tr><td>IsUserAssured</td><td>api.is_user_assured()</td></tr>
