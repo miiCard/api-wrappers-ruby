@@ -34,6 +34,7 @@ The following list is provided as a convenient cheat-sheet, and maps the API's m
 <table>
 <tr><th>API method</td><th>Ruby equivalent (given `api` instance of MiiCardOAuthClaimsService)</th></tr>
 <tr><td>AssuranceImage</td><td>api.assurance_image(type)</td></tr>
+<tr><td>GetCardImage</td><td>api.get_card_image(snapshot_id, show_email_address, show_phone_number, format)</td></tr>
 <tr><td>GetClaims</td><td>api.get_claims()</td></tr>
 <tr><td>GetIdentitySnapshot</td><td>api.get_identity_snapshot(snapshot_id)</td></tr>
 <tr><td>GetIdentitySnapshotPdf</td><td>api.get_identity_snapshot_pdf(snapshot_id)</td></tr>
