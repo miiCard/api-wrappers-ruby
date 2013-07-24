@@ -424,7 +424,7 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 	end
 
 	def get_card_image(snapshot_id, show_email_address, show_phone_number, format)
-		params = Hash["SnapshotId", type, "ShowEmailAddress", show_email_address, "ShowPhoneNumber", show_phone_number, "Format", format]
+		params = Hash["SnapshotId", snapshot_id, "ShowEmailAddress", show_email_address, "ShowPhoneNumber", show_phone_number, "Format", format]
 		
 		return make_request(MiiCardServiceUrls.get_method_url('GetCardImage'), params, nil, false)
 	end
