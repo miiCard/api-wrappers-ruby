@@ -423,7 +423,7 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		return make_request(MiiCardServiceUrls.get_method_url('AssuranceImage'), params, nil, false)
 	end
 
-	def assurance_image(snapshot_id, show_email_address, show_phone_number, format)
+	def card_image(snapshot_id, show_email_address, show_phone_number, format)
 		params = Hash["SnapshotId", type, "ShowEmailAddress", show_email_address, "ShowPhoneNumber", show_phone_number, "Format", format]
 		
 		return make_request(MiiCardServiceUrls.get_method_url('GetCardImage'), params, nil, false)
