@@ -1,13 +1,38 @@
 require "oauth"
 require "json"
+require "digest/sha1"
+require "net/http"
+require "openssl/x509"
 
 class MiiCardServiceUrls
 	OAUTH_ENDPOINT = "https://sts.miicard.com/auth/OAuth.ashx"
 	STS_SITE = "https://sts.miicard.com"
 	CLAIMS_SVC = "https://sts.miicard.com/api/v1/Claims.svc/json"
+	FINANCIAL_SVC = "https://sts.miicard.com/api/v1/Financial.svc/json"
+	DIRECTORY_SVC = "https://sts.miicard.com/api/v1/Members"
 	
+	# Deprecated - prefer the API-specific methods get_claims_method_url
+	# and get_financial_method_url
 	def self.get_method_url(method_name)
 		return MiiCardServiceUrls::CLAIMS_SVC + "/" + method_name
+	end
+
+	def self.get_claims_method_url(method_name)
+		return MiiCardServiceUrls::CLAIMS_SVC + "/" + method_name
+	end
+
+	def self.get_financial_method_url(method_name)
+		return MiiCardServiceUrls::FINANCIAL_SVC + "/" + method_name
+	end
+
+	def self.get_directory_service_query_url(criterion, value, hashed = false)
+		to_return = DIRECTORY_SVC + "?" + criterion + "=" + value
+
+		if (hashed)
+			to_return = to_return + "&hashed=true"
+		end
+
+		return to_return
 	end
 end
 
@@ -25,6 +50,10 @@ end
 module MiiApiErrorCode
 	# The API call succeeded.
 	SUCCESS = 0
+	# An unrecognised search criterion was supplied to the Directory API
+	UNKNOWN_SEARCH_CRITERION = 10
+	# No miiCard members matched the Directory API search criteria
+	NO_MATCHES = 11
 	# The user has revoked access to your application. The user would
 	# have to repeat the OAuth authorisation process before access would be
 	# restored to your application.
@@ -34,6 +63,8 @@ module MiiApiErrorCode
 	USER_SUBSCRIPTION_LAPSED = 200
 	# Signifies that your account has not been enabled for transactional support.
 	TRANSACTIONAL_SUPPORT_DISABLED = 1000
+	# Signifies that your account has not been enabled for Financial API support.
+	FINANCIAL_DATA_SUPPPORT_DISABLED = 1001
 	# Signifies that your account's support status is development-only. This is the
 	# case when your application hasn't yet been made live in the miiCard system, for example
 	# while we process your billing details and perform final checks.
@@ -64,6 +95,34 @@ module WebPropertyType
 	DOMAIN = 0
 	# Indicates that the WebProperty relates to a website.
 	WEBSITE = 1
+end
+
+module QualificationType
+	# Indicates that the Qualification relates to an academic award
+	ACADEMIC = 0
+	# Indicates that the Qualification relates to a professional certification
+	PROFESSIONAL = 1
+end
+
+module AuthenticationTokenType
+	# Specifies that no second factor was employed
+	NONE = 0
+	# Specifies that a soft token was employed, such as an SMS sent to
+	# a registered mobile device or software OATH provider
+	SOFT = 1
+	# Specifies that a hard token was employed, such as a YubiKey
+	HARD = 2
+end
+
+module RefreshState
+	# Indicates that a request to refresh financial data is in an incomplete, unknown
+	# state - probably indicating an error
+	UNKNOWN = 0
+	# Indicates that the requested financial data refresh has completed and the most
+	# recent available financial data can now be requested
+	DATA_AVAILABLE = 1
+	# Indicates that a requested financial data refresh is still in progress
+	IN_PROGRESS = 2
 end
 
 # Base class for most verifiable identity data.
@@ -194,12 +253,211 @@ class WebProperty < Claim
 	end
 end
 
+class Qualification
+	attr_accessor :type, :title, :data_provider, :data_provider_url
+
+	def initialize(type, title, data_provider, data_provider_url)
+		@type = type
+		@title = title
+		@data_provider = data_provider
+		@data_provider_url = data_provider_url
+	end
+
+	def self.from_hash(hash)
+		return Qualification.new(
+			hash["Type"],
+			hash["Title"],
+			hash["DataProvider"],
+			hash["DataProviderUrl"]
+		)
+	end
+end
+
+class GeographicLocation
+	attr_accessor :location_provider, :latitude, :longitude, :lat_long_accuracy_metres
+	attr_accessor :approximate_address
+
+	def initialize(location_provider, latitude, longitude, lat_long_accuracy_metres, approximate_address)
+		@location_provider = location_provider
+		@latitude = latitude
+		@longitude = longitude
+		@lat_long_accuracy_metres = lat_long_accuracy_metres
+		@approximate_address = approximate_address
+	end
+
+	def self.from_hash(hash)	
+		postal_address = hash["ApproximateAddress"]
+		postal_address_parsed = nil
+		unless (postal_address.nil?)
+			postal_address_parsed = PostalAddress::from_hash(postal_address)
+		end
+
+		return GeographicLocation.new(
+			hash["LocationProvider"],
+			hash["Latitude"],
+			hash["Longitude"],
+			hash["LatLongAccuracyMetres"],
+			postal_address_parsed
+		)
+	end
+end
+
+class AuthenticationDetails
+	attr_accessor :authentication_time_utc, :second_factor_token_type, :second_factor_provider, :locations
+
+	def initialize(authentication_time_utc, second_factor_token_type, second_factor_provider, locations)
+		@authentication_time_utc = authentication_time_utc
+		@second_factor_token_type = second_factor_token_type
+		@second_factor_provider = second_factor_provider
+		@locations = locations
+	end
+
+	def self.from_hash(hash)
+		locations = hash["Locations"]
+		locations_parsed = nil
+		unless (locations.nil? || locations.empty?)
+			locations_parsed = locations.map{|item| GeographicLocation::from_hash(item)}
+		end
+
+		return AuthenticationDetails.new(
+			(Util::parse_dot_net_json_datetime(hash['AuthenticationTimeUtc']) rescue nil),
+			hash['SecondFactorTokenType'],
+			hash['SecondFactorProvider'],
+			locations_parsed
+		)
+	end
+end
+
+class FinancialRefreshStatus
+	attr_accessor :state
+
+	def initialize(state)
+		@state = state
+	end
+
+	def self.from_hash(hash)
+		@state = hash['State']
+	end
+end
+
+class FinancialTransaction
+	attr_accessor :date, :amount_credited, :amount_debited, :description, :id
+
+	def initialize(date, amount_credited, amount_debited, description, id)
+		@date = date
+		@amount_credited = amount_credited
+		@amount_debited = amount_debited
+		@description = description
+		@id = id
+	end
+
+	def self.from_hash(hash)
+		return FinancialTransaction.new(
+			(Util::parse_dot_net_json_datetime(hash['Date']) rescue nil),
+			hash['AmountCredited'],
+			hash['AmountDebited'],
+			hash['Description'],
+			hash['ID']
+		)
+	end
+end
+
+class FinancialAccount
+	attr_accessor :account_name, :holder, :sort_code, :account_number, :type, :from_date, :last_updated_utc
+	attr_accessor :closing_balance, :debits_sum, :debits_count, :credits_sum, :credits_count, :currency_iso
+	attr_accessor :transactions
+
+	def initialize(account_name, holder, sort_code, account_number, type, from_date, last_updated_utc, closing_balance, debits_sum, debits_count, credits_sum, credits_count, currency_iso, transactions)
+		@account_name = account_name
+		@holder = holder
+		@sort_code = sort_code
+		@account_number = account_number
+		@type = type
+		@from_date = from_date
+		@last_updated_utc = last_updated_utc
+		@closing_balance = closing_balance
+		@debits_sum = debits_sum
+		@debits_count = debits_count
+		@credits_sum = credits_sum
+		@credits_count = credits_count
+		@currency_iso = currency_iso
+		@transactions = transactions
+	end
+
+	def self.from_hash(hash)
+		transactions = hash["Transactions"]
+		transactions_parsed = nil
+		unless (transactions.nil? || transactions.empty?)
+			transactions_parsed = transactions.map{|item| FinancialTransaction::from_hash(item)}
+		end
+
+		return FinancialAccount.new(
+			hash['AccountName'],
+			hash['Holder'],
+			hash['SortCode'],
+			hash['AccountNumber'],
+			hash['Type'],
+			(Util::parse_dot_net_json_datetime(hash['FromDate']) rescue nil),
+			(Util::parse_dot_net_json_datetime(hash['LastUpdatedUtc']) rescue nil),
+			hash['ClosingBalance'],
+			hash['DebitsSum'],
+			hash['DebitsCount'],
+			hash['CreditsSum'],
+			hash['CreditsCount'],
+			hash['CurrencyIso'],
+			transactions_parsed
+		)
+	end
+end
+
+class FinancialProvider
+	attr_accessor :provider_name, :financial_accounts
+
+	def initialize(provider_name, financial_accounts)
+		@provider_name = provider_name
+		@financial_accounts = financial_accounts
+	end
+
+	def self.from_hash(hash)
+		accounts = hash["FinancialAccounts"]
+		accounts_parsed = nil
+		unless (accounts.nil? || accounts.empty?)
+			accounts_parsed = accounts.map{|item| FinancialAccount::from_hash(item)}
+		end
+
+		return FinancialProvider.new(
+			hash['ProviderName'],
+			accounts_parsed
+		)
+	end
+end
+
+class MiiFinancialData
+	attr_accessor :financial_providers
+
+	def initialize(financial_providers)
+		@financial_providers = financial_providers
+	end
+
+	def self.from_hash(hash)
+		financial_providers = hash["FinancialProviders"]
+		financial_providers_parsed = nil
+		unless (financial_providers.nil? || financial_providers.empty?)
+			financial_providers_parsed = financial_providers.map{|item| FinancialProvider::from_hash(item)}
+		end
+
+		return MiiFinancialData.new(
+			financial_providers_parsed
+		)
+	end
+end
+
 class MiiUserProfile
 	attr_accessor :username, :salutation, :first_name, :middle_name, :last_name
 	attr_accessor :previous_first_name, :previous_middle_name, :previous_last_name
 	attr_accessor :last_verified, :profile_url, :profile_short_url, :card_image_url, :email_addresses, :identities, :postal_addresses
 	attr_accessor :phone_numbers, :web_properties, :identity_assured, :has_public_profile
-	attr_accessor :public_profile, :date_of_birth
+	attr_accessor :public_profile, :date_of_birth, :qualifications, :age
 	
 	def initialize(
 		username,
@@ -222,7 +480,9 @@ class MiiUserProfile
 		identity_assured,
 		has_public_profile,
 		public_profile,
-		date_of_birth
+		date_of_birth,
+		qualifications,
+		age
 		)
 		
 		@username= username
@@ -246,6 +506,8 @@ class MiiUserProfile
 		@has_public_profile = has_public_profile
 		@public_profile = public_profile
 		@date_of_birth = date_of_birth
+		@qualifications = qualifications
+		@age = age
 	end
 	
 	def self.from_hash(hash)
@@ -278,6 +540,12 @@ class MiiUserProfile
 		unless (web_properties.nil? || web_properties.empty?)
 			web_properties_parsed = web_properties.map{|item| WebProperty::from_hash(item)}
 		end
+
+		qualifications = hash["Qualifications"]
+		qualifications_parsed = nil
+		unless (qualifications.nil? || qualifications.empty?)
+			qualifications_parsed = qualifications.map{|item| Qualification::from_hash(item)}
+		end
 		
 		public_profile = hash["PublicProfile"]
 		public_profile_parsed = nil
@@ -306,7 +574,9 @@ class MiiUserProfile
 			hash['IdentityAssured'],
 			hash['HasPublicProfile'],
 			public_profile_parsed,
-                        (Util::parse_dot_net_json_datetime(hash['DateOfBirth']) rescue nil)
+            (Util::parse_dot_net_json_datetime(hash['DateOfBirth']) rescue nil),
+			qualifications_parsed,
+			hash['Age']
 			)			
 	end
 end
@@ -396,58 +666,8 @@ class MiiCardOAuthServiceBase
 		@access_token = access_token
 		@access_token_secret = access_token_secret
 	end
-end
-
-class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
-	def initialize(consumer_key, consumer_secret, access_token, access_token_secret)
-		super(consumer_key, consumer_secret, access_token, access_token_secret)
-	end
 	
-	def get_claims
-		return make_request(MiiCardServiceUrls.get_method_url('GetClaims'), nil, MiiUserProfile.method(:from_hash), true)
-	end
-	
-	def is_social_account_assured(social_account_id, social_account_type)
-		params = Hash["socialAccountId", social_account_id, "socialAccountType", social_account_type]
-		
-		return make_request(MiiCardServiceUrls.get_method_url('IsSocialAccountAssured'), params, nil, true)
-	end
-	
-	def is_user_assured
-		return make_request(MiiCardServiceUrls.get_method_url('IsUserAssured'), nil, nil, true)
-	end
-	
-	def assurance_image(type)
-		params = Hash["type", type]
-		
-		return make_request(MiiCardServiceUrls.get_method_url('AssuranceImage'), params, nil, false)
-	end
-
-	def get_card_image(snapshot_id, show_email_address, show_phone_number, format)
-		params = Hash["SnapshotId", snapshot_id, "ShowEmailAddress", show_email_address, "ShowPhoneNumber", show_phone_number, "Format", format]
-		
-		return make_request(MiiCardServiceUrls.get_method_url('GetCardImage'), params, nil, false)
-	end
-		
-	def get_identity_snapshot_details(snapshot_id = nil)
-		params = Hash["snapshotId", snapshot_id]
-		
-		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshotDetails'), params, IdentitySnapshotDetails.method(:from_hash), true, true)
-	end
-	
-	def get_identity_snapshot(snapshot_id)
-		params = Hash["snapshotId", snapshot_id]
-		
-		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshot'), params, IdentitySnapshot.method(:from_hash), true)
-	end
-
-	def get_identity_snapshot_pdf(snapshot_id)
-		params = Hash["snapshotId", snapshot_id]
-		
-		return make_request(MiiCardServiceUrls.get_method_url('GetIdentitySnapshotPdf'), params, nil, false)
-	end
-	
-	private
+	protected
 	def make_request(url, post_data, payload_processor, wrapped_response, array_type_payload = false)
 		consumer = OAuth::Consumer.new(@consumer_key, @consumer_secret, {:site => MiiCardServiceUrls::STS_SITE, :request_token_path => MiiCardServiceUrls::OAUTH_ENDPOINT, :access_token_path => MiiCardServiceUrls::OAUTH_ENDPOINT, :authorize_path => MiiCardServiceUrls::OAUTH_ENDPOINT })
 		access_token = OAuth::AccessToken.new(consumer, @access_token, @access_token_secret)
@@ -461,6 +681,173 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		else
 			return response.body
 		end
+	end
+end
+
+class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
+	def initialize(consumer_key, consumer_secret, access_token, access_token_secret)
+		super(consumer_key, consumer_secret, access_token, access_token_secret)
+	end
+
+	def get_method_url(method)
+		return MiiCardServiceUrls.get_claims_method_url(method)
+	end
+	
+	def get_claims
+		return make_request(get_method_url('GetClaims'), nil, MiiUserProfile.method(:from_hash), true)
+	end
+	
+	def is_social_account_assured(social_account_id, social_account_type)
+		params = Hash["socialAccountId", social_account_id, "socialAccountType", social_account_type]
+		
+		return make_request(get_method_url('IsSocialAccountAssured'), params, nil, true)
+	end
+	
+	def is_user_assured
+		return make_request(get_method_url('IsUserAssured'), nil, nil, true)
+	end
+	
+	def assurance_image(type)
+		params = Hash["type", type]
+		
+		return make_request(get_method_url('AssuranceImage'), params, nil, false)
+	end
+
+	def get_card_image(snapshot_id, show_email_address, show_phone_number, format)
+		params = Hash["SnapshotId", snapshot_id, "ShowEmailAddress", show_email_address, "ShowPhoneNumber", show_phone_number, "Format", format]
+		
+		return make_request(get_method_url('GetCardImage'), params, nil, false)
+	end
+		
+	def get_identity_snapshot_details(snapshot_id = nil)
+		params = Hash["snapshotId", snapshot_id]
+		
+		return make_request(get_method_url('GetIdentitySnapshotDetails'), params, IdentitySnapshotDetails.method(:from_hash), true, true)
+	end
+	
+	def get_identity_snapshot(snapshot_id)
+		params = Hash["snapshotId", snapshot_id]
+		
+		return make_request(get_method_url('GetIdentitySnapshot'), params, IdentitySnapshot.method(:from_hash), true)
+	end
+
+	def get_identity_snapshot_pdf(snapshot_id)
+		params = Hash["snapshotId", snapshot_id]
+		
+		return make_request(get_method_url('GetIdentitySnapshotPdf'), params, nil, false)
+	end
+
+	def get_authentication_details(snapshot_id = nil)
+		params = Hash["snapshotId", snapshot_id]
+
+		return make_request(get_method_url('GetAuthenticationDetails'), params, AuthenticationDetails.method(:from_hash), true)
+	end
+end
+
+class MiiCardOAuthFinancialService < MiiCardOAuthServiceBase
+	def initialize(consumer_key, consumer_secret, access_token, access_token_secret)
+		super(consumer_key, consumer_secret, access_token, access_token_secret)
+	end	
+	
+	def get_method_url(method)
+		return MiiCardServiceUrls.get_financial_method_url(method)
+	end
+
+	def is_refresh_in_progress
+		return make_request(get_method_url('IsRefreshInProgress'), nil, nil, true)
+	end
+
+	def refresh_financial_data
+		return make_request(get_method_url('RefreshFinancialData'), nil, FinancialRefreshStatus.method(:from_hash), true)
+	end
+
+	def get_financial_transactions
+		return make_request(get_method_url('GetFinancialTransactions'), nil, MiiFinancialData.method(:from_hash), true)
+	end
+end
+
+class MiiCardDirectoryService
+	CRITERION_USERNAME = "username"
+	CRITERION_EMAIL = "email"
+	CRITERION_PHONE = "phone"
+	CRITERION_TWITTER = "twitter"
+	CRITERION_FACEBOOK = "facebook"
+	CRITERION_LINKEDIN = "linkedin"
+	CRITERION_GOOGLE = "google"
+	CRITERION_MICROSOFT_ID = "liveid"
+	CRITERION_EBAY = "ebay"
+	CRITERION_VERITAS_VITAE = "veritasvitae"
+
+	def find_by_email(email, hashed = false)
+		return find_by(CRITERION_EMAIL, email, hashed)
+	end
+
+	def find_by_phone_number(phone, hashed = false)
+		return find_by(CRITERION_PHONE, phone, hashed)
+	end
+
+	def find_by_username(username, hashed = false)
+		return find_by(CRITERION_USERNAME, username, hashed)
+	end
+
+	def find_by_twitter(twitter_handle_or_profile_url, hashed = false)
+		return find_by(CRITERION_TWITTER, twitter_handle_or_profile_url, hashed)
+	end
+
+	def find_by_facebook(facebook_url, hashed = false)
+		return find_by(CRITERION_FACEBOOK, facebook_url, hashed)
+	end
+
+	def find_by_linkedin(linkedin_www_url, hashed = false)
+		return find_by(CRITERION_LINKEDIN, linkedin_www_url, hashed)
+	end
+
+	def find_by_google(google_handle_or_profile_url, hashed = false)
+		return find_by(CRITERION_GOOGLE, google_handle_or_profile_url, hashed)
+	end
+
+	def find_by_microsoft_id(microsoft_id_url, hashed = false)
+		return find_by(CRITERION_MICROSOFT_ID, microsoft_id_url, hashed)
+	end
+
+	def find_by_ebay(ebay_handle_or_profile_url, hashed = false)
+		return find_by(CRITERION_EBAY, ebay_handle_or_profile_url, hashed)
+	end
+
+	def find_by_veritas_vitae(veritas_vitae_vv_number_or_profile_url, hashed = false)
+		return find_by(CRITERION_VERITAS_VITAE, veritas_vitae_vv_number_or_profile_url, hashed)
+	end
+
+	def find_by(criterion, value, hashed = false)
+		url = MiiCardServiceUrls::get_directory_service_query_url(criterion, value, hashed)
+		uri = URI.parse(url)
+
+		cert_store = OpenSSL::X509::Store.new
+		cert_store.set_default_paths
+
+		http = Net::HTTP.new(uri.host, uri.port)
+		http.use_ssl = true
+		http.cert_store = cert_store
+		http.ca_file = File.join(File.dirname(__FILE__), "certs/sts.miicard.com.pem")
+
+		request = Net::HTTP::Get.new(url)
+		request['Content-type'] = 'application/json'
+		
+		response = (http.request(request) rescue nil)
+
+		if !response.nil? && !response.body.to_s.empty?
+			# Try parsing the response as a MiiApiResponse of MiiUserProfile
+			parsed_response = (MiiApiResponse::from_hash(JSON.parse(response.body), MiiUserProfile.method(:from_hash)) rescue nil)
+			if !parsed_response.nil? && !parsed_response.data.nil?
+				to_return = parsed_response.data
+			end
+		end
+
+		return to_return
+	end
+	
+	def self.hash_identifier(identifier)
+		return Digest::SHA1.hexdigest(identifier.downcase)
 	end
 end
 
