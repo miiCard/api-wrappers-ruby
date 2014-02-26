@@ -410,12 +410,61 @@ class FinancialAccount
 	end
 end
 
-class FinancialProvider
-	attr_accessor :provider_name, :financial_accounts
+class FinancialCreditCard
+	attr_accessor :account_name, :holder, :account_number, :type, :from_date, :last_updated_utc, :credit_limit
+	attr_accessor :running_balance, :debits_sum, :debits_count, :credits_sum, :credits_count, :currency_iso
+	attr_accessor :transactions
 
-	def initialize(provider_name, financial_accounts)
+	def initialize(account_name, holder, account_number, type, from_date, last_updated_utc, credit_limit, running_balance, debits_sum, debits_count, credits_sum, credits_count, currency_iso, transactions)
+		@account_name = account_name
+		@holder = holder
+		@account_number = account_number
+		@type = type
+		@from_date = from_date
+		@last_updated_utc = last_updated_utc
+		@credit_limit = credit_limit
+		@running_balance = running_balance
+		@debits_sum = debits_sum
+		@debits_count = debits_count
+		@credits_sum = credits_sum
+		@credits_count = credits_count
+		@currency_iso = currency_iso
+		@transactions = transactions
+	end
+
+	def self.from_hash(hash)
+		transactions = hash["Transactions"]
+		transactions_parsed = nil
+		unless (transactions.nil? || transactions.empty?)
+			transactions_parsed = transactions.map{|item| FinancialTransaction::from_hash(item)}
+		end
+
+		return FinancialCreditCard.new(
+			hash['AccountName'],
+			hash['Holder'],
+			hash['AccountNumber'],
+			hash['Type'],
+			(Util::parse_dot_net_json_datetime(hash['FromDate']) rescue nil),
+			(Util::parse_dot_net_json_datetime(hash['LastUpdatedUtc']) rescue nil),
+			hash['CreditLimit'],
+			hash['RunningBalance'],
+			hash['DebitsSum'],
+			hash['DebitsCount'],
+			hash['CreditsSum'],
+			hash['CreditsCount'],
+			hash['CurrencyIso'],
+			transactions_parsed
+		)
+	end
+end
+
+class FinancialProvider
+	attr_accessor :provider_name, :financial_accounts, :financial_credit_cards
+
+	def initialize(provider_name, financial_accounts, financial_credit_cards)
 		@provider_name = provider_name
 		@financial_accounts = financial_accounts
+		@financial_credit_cards = financial_credit_cards
 	end
 
 	def self.from_hash(hash)
@@ -425,9 +474,16 @@ class FinancialProvider
 			accounts_parsed = accounts.map{|item| FinancialAccount::from_hash(item)}
 		end
 
+		credit_cards = hash["FinancialCreditCards"]
+		credit_cards_parsed = nil
+		unless (credit_cards.nil? || credit_cards.empty?)
+			credit_cards_parsed = credit_cards.map{|item| FinancialCreditCard::from_hash(item)}
+		end
+
 		return FinancialProvider.new(
 			hash['ProviderName'],
-			accounts_parsed
+			accounts_parsed,
+			credit_cards_parsed
 		)
 	end
 end
@@ -757,12 +813,24 @@ class MiiCardOAuthFinancialService < MiiCardOAuthServiceBase
 		return make_request(get_method_url('IsRefreshInProgress'), nil, nil, true)
 	end
 
+	def is_refresh_in_progress_credit_cards
+		return make_request(get_method_url('IsRefreshInProgressCreditCards'), nil, nil, true)
+	end
+
 	def refresh_financial_data
 		return make_request(get_method_url('RefreshFinancialData'), nil, FinancialRefreshStatus.method(:from_hash), true)
 	end
 
+	def refresh_financial_data_credit_cards
+		return make_request(get_method_url('RefreshFinancialDataCreditCards'), nil, FinancialRefreshStatus.method(:from_hash), true)
+	end
+
 	def get_financial_transactions
 		return make_request(get_method_url('GetFinancialTransactions'), nil, MiiFinancialData.method(:from_hash), true)
+	end
+
+	def get_financial_transactions_credit_cards
+		return make_request(get_method_url('GetFinancialTransactionsCreditCards'), nil, MiiFinancialData.method(:from_hash), true)
 	end
 end
 

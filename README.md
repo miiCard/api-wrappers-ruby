@@ -73,14 +73,17 @@ The following list is provided as a convenient cheat-sheet, and maps the API's m
 <table>
 <tr><th>API method</td><th>Ruby equivalent (given `api` instance of `MiiCardOAuthFinancialService`)</th></tr>
 <tr><td>IsRefreshInProgress</td><td>api.is_refresh_in_progress()</td></tr>
+<tr><td>IsRefreshInProgressCreditCards</td><td>api.is_refresh_in_progress_credit_cards()</td></tr>
 <tr><td>RefreshFinancialData</td><td>api.refresh_financial_data()</td></tr>
+<tr><td>RefreshFinancialDataCreditCards</td><td>api.refresh_financial_data_credit_cards()</td></tr>
 <tr><td>GetFinancialTransactions</td><td>api.get_financial_transactions()</td></tr>
+<tr><td>GetFinancialTransactionsCreditCards</td><td>api.get_financial_transactions_credit_cards()</td></tr>
 </table>
 
 ####Directory API ([documentation link](http://www.miicard.com/developers/directory-api))
 
 <table>
-<tr><th>Search criterion</th><th>Python equivalent (given `api` instance of MiiCardDirectoryService)</th></tr>
+<tr><th>Search criterion</th><th>Ruby equivalent (given `api` instance of MiiCardDirectoryService)</th></tr>
 <tr><td>Any</td><td>api.find_by(criterion, criterion_value, hashed = false)</td></tr>
 <tr><td>Username</td><td>api.find_by_username(username, hashed = false)</td></tr>
 <tr><td>Email</td><td>api.find_by_email(email, hashed = false)</td></tr>
@@ -314,6 +317,26 @@ If you need to hash an identifier you can use the `MiiCardDirectoryService.hash_
 <tr><td>CreditsCount</td><td>account.credits_count</td></tr>
 <tr><td>CurrencyIso</td><td>account.currency_iso</td></tr>
 <tr><td>Transactions</td><td>account.transactions</td></tr>
+</table>
+
+####FinancialCreditCard ([documentation link](http://www.miicard.com/developers/financial-api#FinancialCreditCard))
+
+<table>
+<tr><th>API data-type property</td><th>Ruby equivalent (given `credit_card` instance of `FinancialCreditCard`)</th></tr>
+<tr><td>AccountName</td><td>credit_card.account_name</td></tr>
+<tr><td>Holder</td><td>credit_card.holder</td></tr>
+<tr><td>AccountNumber</td><td>credit_card.account_number</td></tr>
+<tr><td>Type</td><td>credit_card.type</td></tr>
+<tr><td>FromDate</td><td>credit_card.from_date</td></tr>
+<tr><td>LastUpdatedUtc</td><td>credit_card.last_updated_utc</td></tr>
+<tr><td>CreditLimit</td><td>credit_card.credit_limit</td></tr>
+<tr><td>RunningBalance</td><td>credit_card.running_balance</td></tr>
+<tr><td>DebitsSum</td><td>credit_card.debits_sum</td></tr>
+<tr><td>DebitsCount</td><td>credit_card.debits_count</td></tr>
+<tr><td>CreditsSum</td><td>credit_card.credits_sum</td></tr>
+<tr><td>CreditsCount</td><td>credit_card.credits_count</td></tr>
+<tr><td>CurrencyIso</td><td>credit_card.currency_iso</td></tr>
+<tr><td>Transactions</td><td>credit_card.transactions</td></tr>
 </table>
 
 ####FinancialProvider ([documentation link](http://www.miicard.com/developers/financial-api#FinancialProvider))
