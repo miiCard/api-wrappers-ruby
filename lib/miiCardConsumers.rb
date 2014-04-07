@@ -328,6 +328,36 @@ class AuthenticationDetails
 	end
 end
 
+class CreditBureauVerification
+	attr_accessor :data, :last_verified
+
+	def initialize(data, last_verified)
+		@data = data
+		@last_verified = last_verified
+	end
+
+	def self.from_hash(hash)
+		return CreditBureauVerification.new(
+			hash["Data"],
+			Util::parse_dot_net_json_datetime(hash['LastVerified'])
+		)
+	end
+end
+
+class CreditBureauRefreshStatus
+	attr_accessor :state
+
+	def initialize(state)
+		@state = state
+	end
+
+	def self.from_hash(hash)
+		return CreditBureauRefreshStatus.new(
+			hash['State']
+		)
+	end
+end
+
 class FinancialRefreshStatus
 	attr_accessor :state
 
@@ -513,7 +543,7 @@ class MiiUserProfile
 	attr_accessor :previous_first_name, :previous_middle_name, :previous_last_name
 	attr_accessor :last_verified, :profile_url, :profile_short_url, :card_image_url, :email_addresses, :identities, :postal_addresses
 	attr_accessor :phone_numbers, :web_properties, :identity_assured, :has_public_profile
-	attr_accessor :public_profile, :date_of_birth, :qualifications, :age
+	attr_accessor :public_profile, :date_of_birth, :qualifications, :age, :credit_bureau_verification
 	
 	def initialize(
 		username,
@@ -538,7 +568,8 @@ class MiiUserProfile
 		public_profile,
 		date_of_birth,
 		qualifications,
-		age
+		age,
+		credit_bureau_verification
 		)
 		
 		@username= username
@@ -564,6 +595,7 @@ class MiiUserProfile
 		@date_of_birth = date_of_birth
 		@qualifications = qualifications
 		@age = age
+		@credit_bureau_verification = credit_bureau_verification
 	end
 	
 	def self.from_hash(hash)
@@ -603,6 +635,12 @@ class MiiUserProfile
 			qualifications_parsed = qualifications.map{|item| Qualification::from_hash(item)}
 		end
 		
+		credit_bureau = hash["CreditBureauVerification"]
+		credit_bureau_parsed = nil
+		unless credit_bureau.nil?
+			credit_bureau_parsed = CreditBureauVerification::from_hash(credit_bureau)
+		end
+		
 		public_profile = hash["PublicProfile"]
 		public_profile_parsed = nil
 		unless public_profile.nil?
@@ -632,7 +670,8 @@ class MiiUserProfile
 			public_profile_parsed,
             (Util::parse_dot_net_json_datetime(hash['DateOfBirth']) rescue nil),
 			qualifications_parsed,
-			hash['Age']
+			hash['Age'],
+			credit_bureau_parsed
 			)			
 	end
 end
@@ -797,6 +836,14 @@ class MiiCardOAuthClaimsService < MiiCardOAuthServiceBase
 		params = Hash["snapshotId", snapshot_id]
 
 		return make_request(get_method_url('GetAuthenticationDetails'), params, AuthenticationDetails.method(:from_hash), true)
+	end
+
+	def is_credit_bureau_refresh_in_progress
+		return make_request(get_method_url('IsCreditBureauRefreshInProgress'), nil, nil, true)
+	end
+
+	def refresh_credit_bureau_data
+		return make_request(get_method_url('RefreshCreditBureauData'), nil, CreditBureauRefreshStatus.method(:from_hash), true)
 	end
 end
 

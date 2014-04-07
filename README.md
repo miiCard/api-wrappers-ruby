@@ -232,6 +232,7 @@ If you need to hash an identifier you can use the `MiiCardDirectoryService.hash_
 <tr><td>IdentityAssured</td><td>profile.identity_assured</td></tr>
 <tr><td>HasPublicProfile</td><td>profile.has_public_profile</td></tr>
 <tr><td>PublicProfile</td><td>profile.public_profile</td></tr>
+<tr><td>CreditBureauVerification</td><td>profile.credit_bureau_verification</td></tr>
 </table>
 
 ####PhoneNumber ([documentation link](http://www.miicard.com/developers/claims-api#PhoneNumber))
@@ -295,6 +296,19 @@ If you need to hash an identifier you can use the `MiiCardDirectoryService.hash_
 <tr><th>API data-type property</td><th>Ruby equivalent</th></tr>
 <tr><td>Domain</td><td>WebPropertyType.DOMAIN</td></tr>
 <tr><td>Website</td><td>WebPropertyType.WEBSITE</td></tr>
+</table>
+
+####Model\CreditBureauVerification ([documentation link](http://www.miicard.com/developers/claims-api#CreditBureauVerification))
+<table>
+<tr><th>API data-type property</th><th>Ruby equivalent (given `verification` instance of CreditBureauVerification)</th></tr>
+<tr><td>Data</td><td>verification.data</td></tr>
+<tr><td>LastVerified</td><td>verification.last_verified</td></tr>
+</table>
+
+####Model\CreditBureauRefreshStatus ([documentation link](http://www.miicard.com/developers/claims-api#CreditBureauRefreshStatus))
+<table>
+<tr><th>API data-type property</th><th>Ruby equivalent (given `status` instance of `CreditBureauRefreshStatus`)</th></tr>
+<tr><td>State</td><td>status.state</td></tr>
 </table>
 
 ###Data types - Financial API
